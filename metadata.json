@@ -1,0 +1,6 @@
+{
+  "name": "FolioSplit",
+  "description": "Divide archivos PDF multipágina en documentos individuales, extrae nombres mediante selección de área, OCR o IA, y exporta en lote como ZIP.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

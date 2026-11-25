@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #f8fafc;
+    color: #0f172a;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes red-blink {
+  0%, 100% {
+    color: #dc2626;
+    border-color: rgba(220, 38, 38, 0.7);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.25), 0 0 12px rgba(239, 68, 68, 0.28);
+  }
+  50% {
+    color: #991b1b;
+    border-color: rgba(239, 68, 68, 0.25);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0), 0 0 2px rgba(239, 68, 68, 0.08);
+  }
+}
+
+.animate-red-blink {
+  animation: red-blink 1.05s ease-in-out infinite;
+}
