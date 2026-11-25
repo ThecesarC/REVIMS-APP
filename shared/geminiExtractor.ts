@@ -9,10 +9,14 @@ export interface HandlerResult {
   body: Record<string, unknown>;
 }
 
+class MissingApiKeyError extends Error {}
+
 function getGeminiClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY no está configurada en las variables de entorno del servidor.");
+    throw new MissingApiKeyError(
+      "Falta configurar la variable de entorno GEMINI_API_KEY en el servidor (en Netlify: Site configuration > Environment variables > agrega GEMINI_API_KEY y vuelve a desplegar). Mientras tanto puedes usar OCR Local sin límite."
+    );
   }
   return new GoogleGenAI({
     apiKey,
@@ -46,6 +50,15 @@ function parseRetrySeconds(rawMessage: string): number | null {
 }
 
 export function parseGeminiError(error: unknown): ParsedApiError {
+  if (error instanceof MissingApiKeyError) {
+    return {
+      status: 503,
+      code: "MISSING_API_KEY",
+      retrySeconds: null,
+      userMessage: error.message,
+    };
+  }
+
   const errObj = error as { status?: number; message?: string };
   let status = typeof errObj?.status === "number" ? errObj.status : 500;
   let rawMessage = typeof errObj?.message === "string" ? errObj.message : "";

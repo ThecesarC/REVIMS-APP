@@ -303,7 +303,11 @@ export default function App() {
       });
 
       if (!response.ok) {
-        if (response.status === 429 || payload.code === "RESOURCE_EXHAUSTED") {
+        if (
+          response.status === 429 ||
+          payload.code === "RESOURCE_EXHAUSTED" ||
+          payload.code === "MISSING_API_KEY"
+        ) {
           setIsQuotaError(true);
         }
         throw new Error(
@@ -472,7 +476,9 @@ export default function App() {
 
               if (!response.ok) {
                 const quotaHit =
-                  response.status === 429 || payload.code === "RESOURCE_EXHAUSTED";
+                  response.status === 429 ||
+                  payload.code === "RESOURCE_EXHAUSTED" ||
+                  payload.code === "MISSING_API_KEY";
                 if (quotaHit) {
                   setIsQuotaError(true);
                 }
@@ -487,7 +493,12 @@ export default function App() {
                       : p
                   )
                 );
-                if (quotaHit || response.status === 403 || response.status === 401) {
+                if (
+                  quotaHit ||
+                  response.status === 403 ||
+                  response.status === 401 ||
+                  response.status === 503
+                ) {
                   break;
                 }
               } else {
