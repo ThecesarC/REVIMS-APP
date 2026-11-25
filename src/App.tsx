@@ -51,6 +51,25 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
+class StaticHtmlApiError extends Error {}
+
+async function parseApiJsonResponse<T>(response: Response): Promise<T> {
+  const rawText = await response.text();
+  const trimmed = rawText.trim();
+  if (trimmed.startsWith("<")) {
+    throw new StaticHtmlApiError(
+      "El servidor de IA (/api) devolvió HTML en lugar de JSON. Si publicaste en Netlify, incluye la carpeta netlify/functions y define GEMINI_API_KEY en Netlify, o usa OCR Local sin límite."
+    );
+  }
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    throw new Error(
+      `Respuesta no válida del servidor (HTTP ${response.status}). Verifica la configuración de API o usa OCR Local.`
+    );
+  }
+}
+
 export default function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const ocrWorkerRef = useRef<TesseractWorker | null>(null);
@@ -270,13 +289,18 @@ export default function App() {
         }),
       });
 
-      const payload = (await response.json()) as {
+      const payload = await parseApiJsonResponse<{
         fullName?: string;
         rawText?: string;
         confidence?: "high" | "medium" | "low" | "none";
         error?: string;
         code?: string;
-      };
+      }>(response).catch((err) => {
+        if (err instanceof StaticHtmlApiError) {
+          setIsQuotaError(true);
+        }
+        throw err;
+      });
 
       if (!response.ok) {
         if (response.status === 429 || payload.code === "RESOURCE_EXHAUSTED") {
@@ -362,8 +386,9 @@ export default function App() {
 
       try {
         if (targetEngine === "ai") {
-          // Composite sheet packs up to 16 zone crops into ONE single API request
-          const batchSize = aiUseFullPage ? 6 : 16;
+          // Composite sheet packs up to 16 zone crops into ONE single API request;
+          // full-page batches use 4 compressed pages to stay under serverless payload limits
+          const batchSize = aiUseFullPage ? 4 : 16;
 
           for (let i = 0; i < targetPages.length; i += batchSize) {
             if (abortBatchRef.current) break;
@@ -409,9 +434,9 @@ export default function App() {
                       rect,
                       {
                         fullPage: true,
-                        scale: 1.35,
+                        scale: 1.25,
                         mimeType: "image/jpeg",
-                        quality: 0.82,
+                        quality: 0.78,
                       }
                     );
                     return {
@@ -434,7 +459,7 @@ export default function App() {
                 });
               }
 
-              const payload = (await response.json()) as {
+              const payload = await parseApiJsonResponse<{
                 results?: Array<{
                   pageNumber: number;
                   fullName?: string;
@@ -443,7 +468,7 @@ export default function App() {
                 }>;
                 error?: string;
                 code?: string;
-              };
+              }>(response);
 
               if (!response.ok) {
                 const quotaHit =
@@ -489,6 +514,9 @@ export default function App() {
             } catch (err: unknown) {
               const msg =
                 err instanceof Error ? err.message : "Error de red al procesar con IA.";
+              if (err instanceof StaticHtmlApiError) {
+                setIsQuotaError(true);
+              }
               setErrorBanner((prevErr) => prevErr ?? msg);
               setPages((prev) =>
                 prev.map((p) =>
@@ -497,6 +525,9 @@ export default function App() {
                     : p
                 )
               );
+              if (err instanceof StaticHtmlApiError) {
+                break;
+              }
             } finally {
               completed += batchNums.length;
               setBatchProgress({ done: completed, total: targetPages.length });
